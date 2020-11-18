@@ -1,4 +1,3 @@
--- check sql server
 SELECT
 	SERVERPROPERTY('IsClustered') AS IsClustered
 	,SERVERPROPERTY('MachineName') AS MachineName
