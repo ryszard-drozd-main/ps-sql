@@ -15,7 +15,6 @@ Name of database
 File name of Sql Server script to execute
 
 #>
-
 Param(
     [Parameter(Position=0,Mandatory=$True)]
     [string]
@@ -30,27 +29,6 @@ Param(
     $scriptFile
 )
 
-Write-Host "Execute script " $scriptFile
-Write-Host "on server " $serverInstance
-Write-Host "in context of database " $databaseName
-Write-Host ""
+$dataSet = & .\Invoke-Sql-Script.ps1 -ServerInstance $serverInstance -DatabaseName $databaseName -ScriptFile $scriptFile
 
-# example:
-# .\execute-sq-script.ps1 "DESKTOP-S7I74JH\SE2017" "master" show-sql-server.sql
-
-$dataSet = Invoke-Sqlcmd -ServerInstance $serverInstance -Database $databaseName -InputFile $scriptFile -OutputAs DataSet  -OutputSqlErrors $true
-
-foreach($table in $dataSet.Tables)
-{
-    Write-Host $table
-
-    for($columnIndex=0; $columnIndex -le $table.Columns.Count; $columnIndex++)
-    {
-        $column = $table.Columns[$columnIndex]
-        foreach($row in $table.Rows)
-        {
-            $item = $row.ItemArray[$columnIndex]
-            Write-Host $column " - " $item
-        }
-    }
-}
+& .\Print-DataSet.ps1 -dataSet $dataSet
