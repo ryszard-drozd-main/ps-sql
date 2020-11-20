@@ -100,5 +100,6 @@ $SqlConn.Close()
 return $dt
 }
 
-& CallProcedureDb
+$retSet = CallProcedureDb
 
+return $retSet
