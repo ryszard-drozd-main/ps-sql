@@ -1,4 +1,3 @@
-#System.Data.SqlClient.SqlParameterCollection
 Param(
     [Parameter(Position=0,Mandatory=$True)]
     [string]
@@ -21,6 +20,7 @@ $constParameterName="Name"
 $constParameterType="Type"
 $constParameterValue="Value"
 $constParameterDirection="Direction"
+$constParameterSize="Size"
 
 function GetHashValue
 {
@@ -72,8 +72,15 @@ function GetParameterDirection
     )
     return GetHashValue -Hash $hash -Name $constParameterDirection -Mandatory $False -DefValue 'Input'
 }
+function GetParameterSize
+{
+    param (
+        [Hashtable]$hash
+    )
+    return GetHashValue -Hash $hash -Name $constParameterSize -Mandatory $False -DefValue -1
+}
 
-function CallProcedureDb
+function CallProcedureDbMars
 {
 $SqlConn = New-Object System.Data.SqlClient.SqlConnection("Server = $serverInstance; Database = $databaseName; Integrated Security = True;")
 $SqlConn.Open()
@@ -81,25 +88,51 @@ $cmd = $SqlConn.CreateCommand()
 $cmd.CommandType = 'StoredProcedure'
 $cmd.CommandText = $procedureName
 
+$outputs = @()
+
 foreach($p in $procParams)
 {
     $paramName = GetParameterName -Hash $p
     $paramType = GetParameterType -Hash $p
     $direction = GetParameterDirection -Hash $p
     $value = GetParameterValue -Hash $p
+    $size = GetParameterSize -Hash $p
     $dbp = $cmd.Parameters.Add($paramName,$paramType)
     $dbp.Direction = $direction
     $dbp.Value = $value
+    if($size -gt 0)
+    {
+        $dbp.Size=$size
+    }
+
+    if($direction -eq "Output")
+    {
+        $outputs += ,@($paramName)
+    }
 }
 
-$results = $cmd.ExecuteReader()
-$dt = New-Object System.Data.DataTable
-$dt.Load($results)
+$cmd.Parameters.Add("@ReturnValue","")
+$cmd.Parameters["@ReturnValue"].Direction='ReturnValue'
+
+$SqlAdapter = New-Object System.Data.SqlClient.SqlDataAdapter($cmd)
+$DataSet = New-Object System.Data.DataSet
+$SqlAdapter.Fill($DataSet)
+
+$ot = @()
+
+foreach($op in $outputs)
+{
+    $name = $op
+    $value = $cmd.Parameters[$op].Value
+    $ot += ,@{Name=$name;Value=$value}
+}
+
+$resultSet = @{DataTables=$DataSet.Tables;Outputs=$ot;Result=$cmd.Parameters["@ReturnValue"].Value}
 $SqlConn.Close()
 
-return $dt
+return $resultSet
 }
 
-$retSet = CallProcedureDb
+$resSet = CallProcedureDbMars
 
-return $retSet
+return $resSet
