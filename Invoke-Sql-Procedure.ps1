@@ -119,15 +119,24 @@ $DataSet = New-Object System.Data.DataSet
 $SqlAdapter.Fill($DataSet)
 
 $ot = @()
+$hasOutputs = $False
+$returnValue = $cmd.Parameters["@ReturnValue"].Value
+$hasReturn = $False
+if($null -ne $returnValue)
+{
+    $hasReturn = $True
+}
+
 
 foreach($op in $outputs)
 {
     $name = $op
     $value = $cmd.Parameters[$op].Value
     $ot += ,@{Name=$name;Value=$value}
+    $hasOutputs=$True
 }
 
-$resultSet = @{DataTables=$DataSet.Tables;Outputs=$ot;Result=$cmd.Parameters["@ReturnValue"].Value}
+$resultSet = @{DataTables=$DataSet.Tables;HasOutputs=$hasOutputs;Outputs=$ot;HasResult=$hasReturn;Result=$returnValue}
 $SqlConn.Close()
 
 return $resultSet
